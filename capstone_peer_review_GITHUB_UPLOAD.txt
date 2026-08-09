@@ -1,0 +1,243 @@
+CAPSTONE PEER REVIEW GITHUB PROJECT
+====================================
+
+IMPORTANT:
+This is a SINGLE TEXT FILE containing all project files.
+Create the matching folders/files in your GitHub repository and copy each
+section into the file named in its heading.
+
+This is a starter/template project. Replace example model/API/data logic with
+your actual capstone implementation before submitting.
+
+
+======================================================================
+FILE: capstone_peer_review_project/Dockerfile
+======================================================================
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+======================================================================
+FILE: capstone_peer_review_project/README.md
+======================================================================
+# Capstone Project - Peer Review Submission
+
+This repository template is structured around the peer-review requirements.
+
+## Run tests
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+## Run API
+```bash
+uvicorn src.api:app --host 0.0.0.0 --port 8000
+```
+
+## Docker
+```bash
+docker build -t capstone-project .
+docker run -p 8000:8000 capstone-project
+```
+
+IMPORTANT: Replace the example model/data/API logic with the actual capstone implementation before submission.
+
+
+======================================================================
+FILE: capstone_peer_review_project/notebooks/EDA_AND_MODEL_COMPARISON.md
+======================================================================
+# EDA and Model Comparison
+
+Add the actual EDA notebook here. It should contain:
+- Data exploration and cleaning
+- Relevant visualizations
+- Multiple model comparison
+- Baseline vs final-model visualization
+- Interpretation of results
+
+Only claim items that are actually implemented.
+
+
+======================================================================
+FILE: capstone_peer_review_project/peer_review_checklist.md
+======================================================================
+# Peer Review Checklist
+
+- [ ] API unit tests
+- [ ] Model unit tests
+- [ ] Logging unit tests
+- [ ] All tests run with one command and pass
+- [ ] Performance monitoring/measurement
+- [ ] Tests isolated from production data/models/logs
+- [ ] API supports country-specific and all-country predictions
+- [ ] Automated data-ingestion function/script
+- [ ] Multiple models compared
+- [ ] EDA visualizations
+- [ ] Working Docker image
+- [ ] Visualization comparing final model with baseline
+
+Run all tests:
+```bash
+pytest -q
+```
+
+Replace example code with the actual capstone implementation before submission.
+
+
+======================================================================
+FILE: capstone_peer_review_project/requirements.txt
+======================================================================
+fastapi
+uvicorn
+pytest
+numpy
+pandas
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/__init__.py
+======================================================================
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/api.py
+======================================================================
+from fastapi import FastAPI
+from src.model import predict
+from src.logging_config import get_logger
+
+app = FastAPI(title="Capstone Prediction API")
+logger = get_logger()
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.post("/predict/{country}")
+def predict_country(country: str, features: list[float]):
+    value = predict(features)
+    logger.info("Prediction requested for country=%s", country)
+    return {"country": country, "prediction": value}
+
+@app.post("/predict/all")
+def predict_all(features_by_country: dict[str, list[float]]):
+    predictions = {c: predict(x) for c, x in features_by_country.items()}
+    logger.info("Prediction requested for all countries")
+    return {"predictions": predictions}
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/data_ingestion.py
+======================================================================
+import pandas as pd
+
+def ingest_csv(path):
+    return pd.read_csv(path)
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/logging_config.py
+======================================================================
+import logging
+
+def get_logger(name="capstone"):
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+    return logger
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/model.py
+======================================================================
+import numpy as np
+
+def predict(features):
+    values = np.asarray(features, dtype=float)
+    return float(values.mean()) if values.size else 0.0
+
+
+======================================================================
+FILE: capstone_peer_review_project/src/performance.py
+======================================================================
+import time
+
+def measure_prediction_time(function, *args, **kwargs):
+    start = time.perf_counter()
+    result = function(*args, **kwargs)
+    elapsed = time.perf_counter() - start
+    return result, elapsed
+
+
+======================================================================
+FILE: capstone_peer_review_project/tests/__init__.py
+======================================================================
+
+
+======================================================================
+FILE: capstone_peer_review_project/tests/test_api.py
+======================================================================
+from fastapi.testclient import TestClient
+from src.api import app
+
+client = TestClient(app)
+
+def test_health():
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"
+
+def test_country_prediction():
+    r = client.post("/predict/India", json=[1, 2, 3])
+    assert r.status_code == 200
+    assert r.json()["country"] == "India"
+
+def test_all_country_prediction():
+    r = client.post("/predict/all", json={"India": [1, 2], "USA": [3, 4]})
+    assert r.status_code == 200
+    assert set(r.json()["predictions"]) == {"India", "USA"}
+
+
+======================================================================
+FILE: capstone_peer_review_project/tests/test_data_ingestion.py
+======================================================================
+import pandas as pd
+from src.data_ingestion import ingest_csv
+
+def test_data_ingestion(tmp_path):
+    path = tmp_path / "sample.csv"
+    pd.DataFrame({"value": [1, 2]}).to_csv(path, index=False)
+    df = ingest_csv(path)
+    assert list(df["value"]) == [1, 2]
+
+
+======================================================================
+FILE: capstone_peer_review_project/tests/test_logging.py
+======================================================================
+from src.logging_config import get_logger
+
+def test_logger_exists():
+    logger = get_logger("test_logger")
+    assert logger.name == "test_logger"
+
+
+======================================================================
+FILE: capstone_peer_review_project/tests/test_model.py
+======================================================================
+from src.model import predict
+
+def test_model_returns_numeric_prediction():
+    assert isinstance(predict([1, 2, 3]), float)
+
+def test_model_empty_input():
+    assert predict([]) == 0.0
+
